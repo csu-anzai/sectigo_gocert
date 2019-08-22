@@ -206,7 +206,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 
 // DOWNLOAD CERT 
 func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int) string {
-	max_timeout1 := d.Get("max_timeout").(int)
+	max_timeout := d.Get("max_timeout").(int)
 	//max_timeout, err := strconv.Atoi(max_timeout1)
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
