@@ -136,11 +136,8 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 	var sslId = 0
 	var renewId = ""
 	url := d.Get("sectigo_ca_base_url").(string)+"enroll"
+	var jsonStr = []byte("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")	
 
-	log.Println("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")
-	//os.Exit(1)
-	var jsonStr = []byte("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")
-	
 	log.Println("Enrolling CERT for "+domain)
 	WriteLogs(d,"Enrolling CERT for "+domain)
 
@@ -300,8 +297,13 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			log.Println("Download Response:", string(downloadResponse))
 			WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			WriteLogs(d,"Download Response:"+string(downloadResponse))
-			CleanUp(d)
-			os.Exit(1)
+
+			if(dlCode == 0) || (dlCode == -1400) {
+				return "TimedOutStateSaved"				
+			} else {
+				CleanUp(d)
+				os.Exit(1)	
+			}
 		} else {
 			return DownloadCert(sslId,d,customerArr,timer)
 		}
@@ -372,8 +374,8 @@ func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string) s
 		CleanUp(d)
 		os.Exit(1)
 	} 
-	log.Println(val)
-	WriteLogs(d,val)
+	// log.Println(val)
+	// WriteLogs(d,val)
 	val = strings.Replace(string(val),"\r","",-1)
 	return string(val)
 }
