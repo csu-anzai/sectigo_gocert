@@ -28,8 +28,8 @@ type EnrollResponseType struct {
 
 // To get the SSLID from Enroll Cert Response Status
 type DownloadResponseType struct {
-	DlCode int `json:"dlId"`
-	Desc string   `json:"desc"`
+	DlCode int `json:"code"`
+	Desc string   `json:"description"`
 }
 
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
