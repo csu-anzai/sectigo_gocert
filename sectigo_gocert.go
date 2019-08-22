@@ -206,8 +206,8 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 
 // DOWNLOAD CERT 
 func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int) string {
-	max_timeout1 := d.Get("max_timeout").(string)
-	max_timeout, err := strconv.Atoi(max_timeout1)
+	max_timeout1 := d.Get("max_timeout").(int)
+	//max_timeout, err := strconv.Atoi(max_timeout1)
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 	url := d.Get("sectigo_ca_base_url").(string)+"collect/"+strconv.Itoa(sslId)+"/x509CO"
@@ -274,13 +274,13 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 		return string(downloadResponse)
 	} else {
 		timer = timer + 30
-		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+max_timeout1+" seconds before the next download attempt...")
-		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+max_timeout1+" seconds before the next download attempt...")
+		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
+		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		time.Sleep(30 * time.Second)
 		if(timer >= max_timeout){
-			log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+max_timeout1+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
+			log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			log.Println("Download Response:", string(downloadResponse))
-			WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+max_timeout1+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
+			WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			WriteLogs(d,"Download Response:"+string(downloadResponse))
 			CleanUp(d)
 			os.Exit(1)
