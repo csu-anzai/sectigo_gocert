@@ -251,9 +251,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	var dl DownloadResponseType
 	json.Unmarshal(downloadResponseJson, &dl)
 	var dlCode = dl.DlCode
-	if(dlCode != 1) && (dlCode != -1400) {
+	if(dlCode != 0) && (dlCode != -1400) {
 		log.Println("Cert code <"+strconv.Itoa(dlCode)+": "+dl.Desc+"> not valid. Process not complete. Exiting.")
-		WriteLogs(d,"Cert code "+strconv.Itoa(dlCode)+": "+dl.Desc+" not valid. Process not complete. Exiting.")
+		WriteLogs(d,"Cert code <"+strconv.Itoa(dlCode)+": "+dl.Desc+"> not valid. Process not complete. Exiting.")
 		CleanUp(d)
 		os.Exit(1)	
 	}
