@@ -132,7 +132,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 	url := d.Get("sectigo_ca_base_url").(string)+"enroll"
 
 	log.Println("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")
-	os.Exit(1)
+	//os.Exit(1)
 	var jsonStr = []byte("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")
 	
 	log.Println("Enrolling CERT for "+domain)
