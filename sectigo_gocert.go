@@ -273,7 +273,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 
 		return string(downloadResponse)
 	} else {
-		timer = timer + 30
+		timer = timer + d.Get("loop_period").(int)
 		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		time.Sleep(30 * time.Second)
