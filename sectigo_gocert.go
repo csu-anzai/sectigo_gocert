@@ -26,6 +26,12 @@ type EnrollResponseType struct {
 	SslIdVal int   `json:"sslId"`
 }
 
+// To get the SSLID from Enroll Cert Response Status
+type DownloadResponseType struct {
+	DlCode int `json:"dlId"`
+	Desc string   `json:"desc"`
+}
+
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
 // Generate Key
@@ -239,6 +245,20 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
     log.Println("Download Response:", string(downloadResponse))
 	WriteLogs(d,"Response Status:"+ resp.Status)
 	WriteLogs(d,"Download Response:"+ string(downloadResponse))
+	
+	// Fetch code and reason from downloadresponse json
+	var downloadResponseJson = []byte(string(downloadResponse))
+	var dl DownloadResponseType
+	json.Unmarshal(downloadResponseJson, &dl)
+	var dlCode = dl.DlCode
+	if(dlCode != 1) && (dlCode != -1400) {
+		log.Println(dl.Desc)
+		WriteLogs(d,dl.Desc)
+		log.Println("Process not complete. Exiting.")
+		WriteLogs(d,"Process not complete. Exiting.")
+		CleanUp(d)
+		os.Exit(1)	
+	}
 	
 	var downloadStatus = strings.Contains(resp.Status, "200")
 	if downloadStatus {
