@@ -276,7 +276,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 		timer = timer + d.Get("loop_period").(int)
 		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
-		time.Sleep(30 * time.Second)
+		time.Sleep(time.Duration(d.Get("loop_period").(int)) * time.Second)
 		if(timer >= max_timeout){
 			log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			log.Println("Download Response:", string(downloadResponse))
