@@ -1,4 +1,4 @@
-package sectigo-gocert
+package sectigo_gocert
 
 import (
 		"github.com/hashicorp/terraform/helper/schema"
