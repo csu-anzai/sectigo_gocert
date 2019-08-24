@@ -360,6 +360,8 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 		WriteLogs(d,"Certificate successfully Revoked...")
 		CleanUp(d)
 		flg = true
+	} else {
+		os.Exit(1)
 	}
 	return flg, err
 }
