@@ -312,9 +312,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 }
 
 // Revoke Certificate 
-func RevokeCertificate(sslId string, d *schema.ResourceData, customerArr map[string]string) (bool, error) {
+func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string]string) (bool, error) {
 	var flg = false 
-	url := d.Get("sectigo_ca_base_url").(string)+"revoke/"+sslId
+	url := d.Get("sectigo_ca_base_url").(string)+"revoke/"+strconv.Itoa(sslId)
 	log.Println(url)
 	WriteLogs(d,url)
 	var jsonStr = []byte("{\"reason\":\"Terraform destroy\"}")
