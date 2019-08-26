@@ -18,6 +18,10 @@ import (
 		"encoding/json"
 		"strconv"
 		"time"
+
+		"crypto/ecdsa"
+		"crypto/elliptic"
+		"flag"
 )
 
 // To get the SSLID from Enroll Cert Response Status
@@ -34,8 +38,34 @@ type DownloadResponseType struct {
 
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
+var (
+	host       = flag.String("host", "trianzcloud.com", "Comma-separated hostnames and IPs to generate a certificate for")
+	validFrom  = flag.String("start-date", "", "Creation date formatted as Jan 1 15:04:05 2011")
+	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
+	isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
+	rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
+	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
+)
+
+// PEM Block for Key Generation
+func pemBlockForKey(priv interface{}) *pem.Block {
+	switch k := priv.(type) {
+	case *rsa.PrivateKey:
+		return &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(k)}
+	case *ecdsa.PrivateKey:
+		b, err := x509.MarshalECPrivateKey(k)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Unable to marshal ECDSA private key: %v", err)
+			os.Exit(2)
+		}
+		return &pem.Block{Type: "EC PRIVATE KEY", Bytes: b}
+	default:
+		return nil
+	}
+}
+
 // Generate Key
-func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, string) {
+func GenerateKey(d *schema.ResourceData, m interface{}) (interface{}, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
@@ -43,21 +73,69 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, string
 	log.Println("Generating KEY for "+domain)
 	WriteLogs(d,"Generating KEY for "+domain)
 
-	keyBytes, err := rsa.GenerateKey(rand.Reader, 2048)
+	// keyBytes, err := rsa.GenerateKey(rand.Reader, 2048)
 
-	// Write KEY to a file 
-	keyOut, err := os.Create(cert_file_path+domain+".key")
+	// // Write KEY to a file 
+	// keyOut, err := os.Create(cert_file_path+domain+".key")
+	// if err != nil {
+	// 	log.Println("Failed to open ca.key for writing:", err)
+	// 	WriteLogs(d,"Failed to open ca.key for writing:"+err.Error())
+	// 	CleanUp(d)
+	// 	os.Exit(1)
+	// }
+	// pem.Encode(keyOut, &pem.Block{
+	// 		Type:  "RSA PRIVATE KEY",
+	// 		Bytes: x509.MarshalPKCS1PrivateKey(keyBytes),
+	// })
+	// keyOut.Close()
+
+	var priv interface{}
+	var err error
+	switch *ecdsaCurve {
+	case "":
+		fmt.Println("log1")
+		priv, err = rsa.GenerateKey(rand.Reader, *rsaBits)
+	case "P224":
+		fmt.Println("log2")
+		priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+	case "P256":
+		fmt.Println("log3")
+		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	case "P384":
+		fmt.Println("log4")
+		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	case "P521":
+		fmt.Println("log5")
+		priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	default:
+		fmt.Println("log6")
+		fmt.Fprintf(os.Stderr, "Unrecognized elliptic curve: %q", *ecdsaCurve)
+		os.Exit(1)
+	}
 	if err != nil {
-		log.Println("Failed to open ca.key for writing:", err)
-		WriteLogs(d,"Failed to open ca.key for writing:"+err.Error())
+		log.Fatalf("failed to generate private key: %s", err)
+	}
+
+	// Write key to file
+	keyOut, err := os.OpenFile(cert_file_path+domain+".key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		log.Print("Failed to open key.pem for writing:", err)
+		WriteLogs(d,"Failed to open key.pem for writing: "+err.Error())
 		CleanUp(d)
 		os.Exit(1)
 	}
-	pem.Encode(keyOut, &pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(keyBytes),
-	})
-	keyOut.Close()
+	if err := pem.Encode(keyOut, pemBlockForKey(priv)); err != nil {
+		log.Fatalf("Failed to write data to key.pem: %s", err)
+		WriteLogs(d,"Failed to write data to key.pem: "+err.Error())
+		CleanUp(d)
+		os.Exit(1)
+	}
+	if err := keyOut.Close(); err != nil {
+		log.Fatalf("error closing key.pem: %s", err)
+		WriteLogs(d,"Error closing key.pem: "+err.Error())
+		CleanUp(d)
+		os.Exit(1)
+	}
 
 	//Read Key from file and put it in the tfstate
 	keyVal, err := ioutil.ReadFile(cert_file_path+domain+".key")
@@ -68,7 +146,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, string
 		os.Exit(1)
 	}
 	//d.Set("sectigo_key",string(keyVal))
-	return keyBytes, string(keyVal)
+	return priv, string(keyVal)
 }
 
 // Generate CSR
