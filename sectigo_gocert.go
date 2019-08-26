@@ -182,7 +182,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *ecdsa.PrivateK
 
     template := x509.CertificateRequest{
         Subject:            subj,
-		SignatureAlgorithm: x509.SHA256WithRSA,
+		SignatureAlgorithm: x509.ECDSAWithSHA512,
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
