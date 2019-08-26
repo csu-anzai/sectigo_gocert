@@ -150,7 +150,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (interface{}, string) {
 }
 
 // Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *rsa.PrivateKey) ([]byte, string) {
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes interface{}) ([]byte, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
