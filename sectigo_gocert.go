@@ -44,7 +44,7 @@ var (
 	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
 	isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
 	rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
-	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
+	ecdsaCurve = flag.String("ecdsa-curve", "", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
 )
 
 // PEM Block for Key Generation
@@ -65,7 +65,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 }
 
 // Generate Key
-func GenerateKey(d *schema.ResourceData, m interface{}) (interface{}, string) {
+func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
@@ -146,11 +146,12 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (interface{}, string) {
 		os.Exit(1)
 	}
 	//d.Set("sectigo_key",string(keyVal))
-	return priv, string(keyVal)
+	return priv.(*rsa.PrivateKey), string(keyVal)
+	//return keyBytes, string(keyVal)
 }
 
 // Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes interface{}) ([]byte, string) {
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *rsa.PrivateKey) ([]byte, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
