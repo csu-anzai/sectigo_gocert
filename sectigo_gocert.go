@@ -186,7 +186,16 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *ecdsa.PrivateK
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
-    csrBytes, _ := x509.CreateCertificateRequest(rand.Reader, &template, keyBytes)
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytes)
+	log.Println("--------------------")
+	log.Println(csrBytes)
+	log.Println("--------------------")
+	if err != nil {
+		log.Println("Failed to open CSR for writing:", err)
+		WriteLogs(d,"Failed to open CSR for writing:"+err.Error())
+		CleanUp(d)
+        os.Exit(1)
+    }
 
 	// Put CSR in a file 
     csrOut, err := os.Create(cert_file_path+domain+".csr")
