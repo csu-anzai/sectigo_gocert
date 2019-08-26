@@ -145,6 +145,9 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*ecdsa.PrivateKey, stri
 		CleanUp(d)
 		os.Exit(1)
 	}
+	log.Println("--------------------")
+	log.Println(priv.(*ecdsa.PrivateKey))
+	log.Println("--------------------")
 	//d.Set("sectigo_key",string(keyVal))
 	return priv.(*ecdsa.PrivateKey), string(keyVal)
 	//return keyBytes, string(keyVal)
