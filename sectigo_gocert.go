@@ -37,7 +37,6 @@ type DownloadResponseType struct {
 }
 
 // To get the SSLID from Enroll Cert Response Status
-csrBytes := byte()
 
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
@@ -229,29 +228,6 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
-	if signAlgType == "RSA" {
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
-		log.Println("############# log 1 ###################")
-		log.Println(csrBytes)
-		log.Println("################################")
-	} else if signAlgType == "ECDSA" {
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)		
-		log.Println("############# log 2 ###################")
-		log.Println(csrBytes)
-		log.Println("################################")
-	}
-
-	log.Println("################################")
-	log.Println(csrBytes)
-	log.Println("################################")
-
-	if err != nil {
-		log.Println("Failed to Generate CSR for ECDSA:", err)
-		WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
-		CleanUp(d)
-        os.Exit(1)
-    }
-
 	// Put CSR in a file 
     csrOut, err := os.Create(cert_file_path+domain+".csr")
     if err != nil {
@@ -260,7 +236,32 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		CleanUp(d)
         os.Exit(1)
     }
-    pem.Encode(csrOut, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
+
+	if signAlgType == "RSA" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
+		if err != nil {
+			log.Println("Failed to Generate CSR for ECDSA:", err)
+			WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
+			CleanUp(d)
+			os.Exit(1)
+		}
+		pem.Encode(csrOut, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
+		log.Println("############# log 1 ###################")
+		log.Println(csrBytes)
+		log.Println("################################")
+	} else if signAlgType == "ECDSA" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)		
+		if err != nil {
+			log.Println("Failed to Generate CSR for ECDSA:", err)
+			WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
+			CleanUp(d)
+			os.Exit(1)
+		}
+		pem.Encode(csrOut, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
+		log.Println("############# log 2 ###################")
+		log.Println(csrBytes)
+		log.Println("################################")
+	}
 	csrOut.Close()
 
 	//Read CSR from file and put it in the tfstate
