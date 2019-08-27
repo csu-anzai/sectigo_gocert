@@ -194,15 +194,19 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		// keyBytes = keyBytesECDSA
 		if curvelength == "P521" {
 			log.Println("-------------log3-1")
+			log.Println("-------------x509.ECDSAWithSHA512")
 			getSignAlgorithm = x509.ECDSAWithSHA512
 		} else if curvelength == "P384" {
 			log.Println("-------------log3-2")
+			log.Println("-------------x509.ECDSAWithSHA384")
 			getSignAlgorithm = x509.ECDSAWithSHA384
 		} else if curvelength == "P256" {
 			log.Println("-------------log3-3")
+			log.Println("-------------x509.ECDSAWithSHA256")
 			getSignAlgorithm = x509.ECDSAWithSHA256
 		} else {
 			log.Println("-------------log3-4")
+			log.Println("-------------x509.ECDSAWithSHA1")
 			getSignAlgorithm = x509.ECDSAWithSHA1
 		}
 	}
