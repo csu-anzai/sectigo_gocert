@@ -47,9 +47,9 @@ var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 // 	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
 // )
 
-var signAlgType = "ecdsa-curve"
-var rsaBits = 2048
-var curvelength = "P256"
+// var signAlgType = "ecdsa-curve"
+// var rsaBits = 2048
+// var curvelength = "P256"
 
 
 // PEM Block for Key Generation
@@ -74,33 +74,20 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
+	var priv interface{}
+	var err error
+
+	var signAlgType = d.Get("sign_algorithm_type").(string)
+	var rsaBits = d.Get("rsa_bits").(int)
+	var curvelength = d.Get("curve_length").(string)
 
 	log.Println("Generating KEY for "+domain)
 	WriteLogs(d,"Generating KEY for "+domain)
 
-	// keyBytes, err := rsa.GenerateKey(rand.Reader, 2048)
-
-	// // Write KEY to a file 
-	// keyOut, err := os.Create(cert_file_path+domain+".key")
-	// if err != nil {
-	// 	log.Println("Failed to open ca.key for writing:", err)
-	// 	WriteLogs(d,"Failed to open ca.key for writing:"+err.Error())
-	// 	CleanUp(d)
-	// 	os.Exit(1)
-	// }
-	// pem.Encode(keyOut, &pem.Block{
-	// 		Type:  "RSA PRIVATE KEY",
-	// 		Bytes: x509.MarshalPKCS1PrivateKey(keyBytes),
-	// })
-	// keyOut.Close()
-
-	var priv interface{}
-	var err error
-
-	if signAlgType == "rsa" {
+	if signAlgType == "RSA" {
 		fmt.Println("log1")
 		priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
-	} else if signAlgType == "ecdsa-curve" {
+	} else if signAlgType == "ECDSA" {
 		if curvelength == "P224" {
 			fmt.Println("log2")
 			priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
@@ -152,12 +139,8 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 		CleanUp(d)
 		os.Exit(1)
 	}
-	//d.Set("sectigo_key",string(keyVal))
-	log.Println("--------------------signAlgType1---------")
-	log.Println(signAlgType)
-	log.Println("--------------------END------------------")
 	
-	if signAlgType == "rsa" {
+	if signAlgType == "RSA" {
 		return priv.(*rsa.PrivateKey), nil, string(keyVal)
 	} else {
 		return nil, priv.(*ecdsa.PrivateKey), string(keyVal)
@@ -166,9 +149,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 }
 
 func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.SignatureAlgorithm {
-	if signAlgType == "rsa" {
-		log.Println("-------------log2")
-		// keyBytes = keyBytesRSA
+	if signAlgType == "RSA" {
 		if rsaBits == 4096 {
 			return x509.SHA512WithRSA
 		} else if rsaBits == 3072 {
@@ -178,7 +159,7 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 		} else {
 			return x509.SHA1WithRSA
 		} 
-	} else if signAlgType == "ecdsa-curve" {
+	} else if signAlgType == "ECDSA" {
 		if curvelength == "P521" {
 			log.Println("-------------x509.ECDSAWithSHA512")
 			return x509.ECDSAWithSHA512
@@ -240,23 +221,20 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)
-	if signAlgType == "rsa" {
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
+	if signAlgType == "ECDSA" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)		
 		log.Println(csrBytes)
 		if err != nil {
-			log.Println("Failed to Generate CSr for RSA: ", err)
-			WriteLogs(d,"Failed to Generate CSr for RSA: "+err.Error())
+			log.Println("Failed to Generate CSR for RSA: ", err)
+			WriteLogs(d,"Failed to Generate CSR for RSA: "+err.Error())
 			CleanUp(d)
 			os.Exit(1)
 		}
 	}
-	log.Println("--------------------")
-	log.Println(csrBytes)
-	log.Println("--------------------")
 	if err != nil {
-		log.Println("Failed to open CSR for writing:", err)
-		WriteLogs(d,"Failed to open CSR for writing:"+err.Error())
+		log.Println("Failed to Generate CSR for ECDSA:", err)
+		WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
 		CleanUp(d)
         os.Exit(1)
     }
@@ -280,7 +258,6 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
         os.Exit(1)
     }
 	var csrString = strings.Replace(string(csrVal),"\n","",-1)
-	// d.Set("sectigo_csr",string(csrVal))
 
 	return csrVal, csrString
 }
