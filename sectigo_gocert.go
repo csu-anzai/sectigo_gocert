@@ -179,21 +179,16 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 			return x509.SHA1WithRSA
 		} 
 	} else if signAlgType == "ecdsa-curve" {
-		log.Println("-------------log3")
 		if curvelength == "P521" {
-			log.Println("-------------log3-1")
 			log.Println("-------------x509.ECDSAWithSHA512")
 			return x509.ECDSAWithSHA512
 		} else if curvelength == "P384" {
-			log.Println("-------------log3-2")
 			log.Println("-------------x509.ECDSAWithSHA384")
 			return x509.ECDSAWithSHA384
 		} else if curvelength == "P256" {
-			log.Println("-------------log3-3")
 			log.Println("-------------x509.ECDSAWithSHA256")
 			return x509.ECDSAWithSHA256
 		} else {
-			log.Println("-------------log3-4")
 			log.Println("-------------x509.ECDSAWithSHA1")
 			return x509.ECDSAWithSHA1
 		}
@@ -213,11 +208,6 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	//var getSignAlgorithm = x509.UnknownSignatureAlgorithm
 	getSignAlgorithm := getSignAlgorithm(signAlgType, rsaBits, curvelength)
 
-	// keyBytes := keyBytesECDSA
-	log.Println("-------------log1")
-	
-	log.Println("-------------log4")
-	//getSignAlgorithm := getSignAlgorithm("rsa","2048")
 	log.Println("---------------------signALG---------")
 	log.Println(getSignAlgorithm)
 	log.Println("---------------------RSAKEY")
