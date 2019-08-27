@@ -152,11 +152,10 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 		CleanUp(d)
 		os.Exit(1)
 	}
-	log.Println("--------------------")
-	//log.Println(priv.(*ecdsa.PrivateKey))
-	log.Println("--------------------")
 	//d.Set("sectigo_key",string(keyVal))
-	//return keyBytes, string(keyVal)
+	log.Println("--------------------")
+	log.Println(signAlgType)
+	log.Println("--------------------")
 	
 	if signAlgType == "rsa" {
 		return priv.(*rsa.PrivateKey), nil, string(keyVal)
@@ -204,7 +203,10 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	//getSignAlgorithm := getSignAlgorithm("rsa","2048")
 	fmt.Println("---------------------")
 	fmt.Println(getSignAlgorithm)
-	// fmt.Println(keyBytes)
+	fmt.Println("---------------------")
+	fmt.Println(keyBytesRSA)
+	fmt.Println("---------------------")
+	fmt.Println(keyBytesECDSA)
 	fmt.Println("---------------------")
 
 	subj := pkix.Name{
