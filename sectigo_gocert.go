@@ -36,6 +36,9 @@ type DownloadResponseType struct {
 	Desc string   `json:"description"`
 }
 
+// To get the SSLID from Enroll Cert Response Status
+csrBytes := byte()
+
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
 // var (
@@ -177,7 +180,7 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 	}
 	return x509.UnknownSignatureAlgorithm
 }
-
+	
 // Generate CSR
 func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
 
@@ -226,17 +229,22 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
-	if signAlgType == "ECDSA" {
-		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)		
+	if signAlgType == "RSA" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
+		log.Println("############# log 1 ###################")
 		log.Println(csrBytes)
-		if err != nil {
-			log.Println("Failed to Generate CSR for RSA: ", err)
-			WriteLogs(d,"Failed to Generate CSR for RSA: "+err.Error())
-			CleanUp(d)
-			os.Exit(1)
-		}
+		log.Println("################################")
+	} else if signAlgType == "ECDSA" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)		
+		log.Println("############# log 2 ###################")
+		log.Println(csrBytes)
+		log.Println("################################")
 	}
+
+	log.Println("################################")
+	log.Println(csrBytes)
+	log.Println("################################")
+
 	if err != nil {
 		log.Println("Failed to Generate CSR for ECDSA:", err)
 		WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
