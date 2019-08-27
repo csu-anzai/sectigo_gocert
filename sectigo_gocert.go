@@ -180,6 +180,10 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 // Generate CSR
 func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
 
+	var signAlgType = d.Get("sign_algorithm_type").(string)
+	var rsaBits = d.Get("rsa_bits").(int)
+	var curvelength = d.Get("curve_length").(string)
+
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 
