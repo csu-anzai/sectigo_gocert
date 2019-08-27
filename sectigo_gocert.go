@@ -170,33 +170,32 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 		log.Println("-------------log2")
 		// keyBytes = keyBytesRSA
 		if rsaBits == 4096 {
-			getSignAlgorithm = x509.SHA512WithRSA
+			return x509.SHA512WithRSA
 		} else if rsaBits == 3072 {
-			getSignAlgorithm = x509.SHA384WithRSA
+			return x509.SHA384WithRSA
 		} else if rsaBits == 2048 {
-			getSignAlgorithm = x509.SHA256WithRSA
+			return x509.SHA256WithRSA
 		} else {
-			getSignAlgorithm = x509.SHA1WithRSA
+			return x509.SHA1WithRSA
 		} 
 	} else if signAlgType == "ecdsa-curve" {
 		log.Println("-------------log3")
-		// keyBytes = keyBytesECDSA
 		if curvelength == "P521" {
 			log.Println("-------------log3-1")
 			log.Println("-------------x509.ECDSAWithSHA512")
-			getSignAlgorithm = x509.ECDSAWithSHA512
+			return x509.ECDSAWithSHA512
 		} else if curvelength == "P384" {
 			log.Println("-------------log3-2")
 			log.Println("-------------x509.ECDSAWithSHA384")
-			getSignAlgorithm = x509.ECDSAWithSHA384
+			return x509.ECDSAWithSHA384
 		} else if curvelength == "P256" {
 			log.Println("-------------log3-3")
 			log.Println("-------------x509.ECDSAWithSHA256")
-			getSignAlgorithm = x509.ECDSAWithSHA256
+			return x509.ECDSAWithSHA256
 		} else {
 			log.Println("-------------log3-4")
 			log.Println("-------------x509.ECDSAWithSHA1")
-			getSignAlgorithm = x509.ECDSAWithSHA1
+			return x509.ECDSAWithSHA1
 		}
 	}
 }
