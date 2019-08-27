@@ -21,7 +21,7 @@ import (
 
 		"crypto/ecdsa"
 		"crypto/elliptic"
-		"flag"
+		// "flag"
 )
 
 // To get the SSLID from Enroll Cert Response Status
@@ -38,14 +38,19 @@ type DownloadResponseType struct {
 
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
 
-var (
-	host       = flag.String("host", "trianzcloud.com", "Comma-separated hostnames and IPs to generate a certificate for")
-	validFrom  = flag.String("start-date", "", "Creation date formatted as Jan 1 15:04:05 2011")
-	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
-	isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
-	rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
-	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
-)
+// var (
+// 	host       = flag.String("host", "trianzcloud.com", "Comma-separated hostnames and IPs to generate a certificate for")
+// 	validFrom  = flag.String("start-date", "", "Creation date formatted as Jan 1 15:04:05 2011")
+// 	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
+// 	isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
+// 	rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
+// 	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
+// )
+
+var signAlgType = "ecdsa-curve"
+var rsaBits = 2048
+var curvelength = "P256"
+
 
 // PEM Block for Key Generation
 func pemBlockForKey(priv interface{}) *pem.Block {
@@ -65,7 +70,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 }
 
 // Generate Key
-func GenerateKey(d *schema.ResourceData, m interface{}) (*ecdsa.PrivateKey, string) {
+func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa.PrivateKey, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
@@ -91,26 +96,28 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*ecdsa.PrivateKey, stri
 
 	var priv interface{}
 	var err error
-	switch *ecdsaCurve {
-	case "":
+
+	if signAlgType == "rsa" {
 		fmt.Println("log1")
-		priv, err = rsa.GenerateKey(rand.Reader, *rsaBits)
-	case "P224":
-		fmt.Println("log2")
-		priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
-	case "P256":
-		fmt.Println("log3")
-		priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	case "P384":
-		fmt.Println("log4")
-		priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	case "P521":
-		fmt.Println("log5")
-		priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-	default:
-		fmt.Println("log6")
-		fmt.Fprintf(os.Stderr, "Unrecognized elliptic curve: %q", *ecdsaCurve)
-		os.Exit(1)
+		priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
+	} else if signAlgType == "ecdsa-curve" {
+		if curvelength == "P224" {
+			fmt.Println("log2")
+			priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+		} else if curvelength == "P256" {
+			fmt.Println("log3")
+			priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		} else if curvelength == "P384" {
+			fmt.Println("log4")
+			priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		} else if curvelength == "P521" {
+			fmt.Println("log5")
+			priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		} else {
+			fmt.Println("log6")
+			fmt.Fprintf(os.Stderr, "Unrecognized elliptic curve: %q", signAlgType)
+			os.Exit(1)
+		}
 	}
 	if err != nil {
 		log.Fatalf("failed to generate private key: %s", err)
@@ -146,21 +153,59 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*ecdsa.PrivateKey, stri
 		os.Exit(1)
 	}
 	log.Println("--------------------")
-	log.Println(priv.(*ecdsa.PrivateKey))
+	//log.Println(priv.(*ecdsa.PrivateKey))
 	log.Println("--------------------")
 	//d.Set("sectigo_key",string(keyVal))
-	return priv.(*ecdsa.PrivateKey), string(keyVal)
 	//return keyBytes, string(keyVal)
+	
+	if signAlgType == "rsa" {
+		return priv.(*rsa.PrivateKey), nil, string(keyVal)
+	} else {
+		return nil, priv.(*ecdsa.PrivateKey), string(keyVal)
+	}
+	return nil, nil, ""
 }
 
 // Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *ecdsa.PrivateKey) ([]byte, string) {
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 
 	log.Println("Generating CSR for "+domain)
 	WriteLogs(d,"Generating CSR for "+domain)
+
+	var getSignAlgorithm = x509.UnknownSignatureAlgorithm
+	// keyBytes := keyBytesECDSA
+	if signAlgType == "rsa" {
+		// keyBytes = keyBytesRSA
+		if rsaBits == 4096 {
+			getSignAlgorithm = x509.SHA512WithRSA
+		} else if rsaBits == 3072 {
+			getSignAlgorithm = x509.SHA384WithRSA
+		} else if rsaBits == 2048 {
+			getSignAlgorithm = x509.SHA256WithRSA
+		} else {
+			getSignAlgorithm = x509.SHA1WithRSA
+		} 
+	} else if signAlgType == "ecdsa" {
+		// keyBytes = keyBytesECDSA
+		if curvelength == "curveP521" {
+			getSignAlgorithm = x509.ECDSAWithSHA512
+		} else if curvelength == "curveP384" {
+			getSignAlgorithm = x509.ECDSAWithSHA384
+		} else if curvelength == "curveP256" {
+			getSignAlgorithm = x509.ECDSAWithSHA256
+		} else {
+			getSignAlgorithm = x509.ECDSAWithSHA1
+		}
+	}
+
+	//getSignAlgorithm := getSignAlgorithm("rsa","2048")
+	fmt.Println("---------------------")
+	fmt.Println(getSignAlgorithm)
+	// fmt.Println(keyBytes)
+	fmt.Println("---------------------")
 
 	subj := pkix.Name{
         CommonName:         domain,
@@ -182,11 +227,21 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytes *ecdsa.PrivateK
 
     template := x509.CertificateRequest{
         Subject:            subj,
-		SignatureAlgorithm: x509.ECDSAWithSHA256,
+		SignatureAlgorithm: getSignAlgorithm, //x509.ECDSAWithSHA256,
 		DNSNames:			[]string{d.Get("subject_alt_names").(string)} ,
     }
 
-	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytes)
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesECDSA)
+	if signAlgType == "rsa" {
+		csrBytes, err := x509.CreateCertificateRequest(rand.Reader, &template, keyBytesRSA)
+		log.Println(csrBytes)
+		if err != nil {
+			log.Println("Failed to Generate CSr for RSA: ", err)
+			WriteLogs(d,"Failed to Generate CSr for RSA: "+err.Error())
+			CleanUp(d)
+			os.Exit(1)
+		}
+	}
 	log.Println("--------------------")
 	log.Println(csrBytes)
 	log.Println("--------------------")
