@@ -198,6 +198,7 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 			return x509.ECDSAWithSHA1
 		}
 	}
+	return x509.UnknownSignatureAlgorithm
 }
 
 // Generate CSR
@@ -210,7 +211,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	WriteLogs(d,"Generating CSR forr "+domain)
 
 	//var getSignAlgorithm = x509.UnknownSignatureAlgorithm
-	getSignAlgorithm = getSignAlgorithm(signAlgType, rsaBits, curvelength)
+	getSignAlgorithm := getSignAlgorithm(signAlgType, rsaBits, curvelength)
 
 	// keyBytes := keyBytesECDSA
 	log.Println("-------------log1")
