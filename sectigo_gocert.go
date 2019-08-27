@@ -192,11 +192,11 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	} else if signAlgType == "ecdsa-curve" {
 		log.Println("-------------log3")
 		// keyBytes = keyBytesECDSA
-		if curvelength == "curveP521" {
+		if curvelength == "P521" {
 			getSignAlgorithm = x509.ECDSAWithSHA512
-		} else if curvelength == "curveP384" {
+		} else if curvelength == "P384" {
 			getSignAlgorithm = x509.ECDSAWithSHA384
-		} else if curvelength == "curveP256" {
+		} else if curvelength == "P256" {
 			getSignAlgorithm = x509.ECDSAWithSHA256
 		} else {
 			getSignAlgorithm = x509.ECDSAWithSHA1
