@@ -83,6 +83,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 
 	log.Println("Generating KEY for "+domain)
 	WriteLogs(d,"Generating KEY for "+domain)
+	log.Println("signAlgType: "+signAlgType)
 
 	if signAlgType == "RSA" {
 		fmt.Println("log1")
