@@ -165,18 +165,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	return nil, nil, ""
 }
 
-// Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
-
-	domain := d.Get("domain").(string)
-	cert_file_path := d.Get("cert_file_path").(string)
-
-	log.Println("Generating CSR forr "+domain)
-	WriteLogs(d,"Generating CSR forr "+domain)
-
-	var getSignAlgorithm = x509.UnknownSignatureAlgorithm
-	// keyBytes := keyBytesECDSA
-	log.Println("-------------log1")
+func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.SignatureAlgorithm {
 	if signAlgType == "rsa" {
 		log.Println("-------------log2")
 		// keyBytes = keyBytesRSA
@@ -210,7 +199,23 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 			getSignAlgorithm = x509.ECDSAWithSHA1
 		}
 	}
+}
 
+// Generate CSR
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
+
+	domain := d.Get("domain").(string)
+	cert_file_path := d.Get("cert_file_path").(string)
+
+	log.Println("Generating CSR forr "+domain)
+	WriteLogs(d,"Generating CSR forr "+domain)
+
+	//var getSignAlgorithm = x509.UnknownSignatureAlgorithm
+	getSignAlgorithm = getSignAlgorithm(signAlgType, rsaBits, curvelength)
+
+	// keyBytes := keyBytesECDSA
+	log.Println("-------------log1")
+	
 	log.Println("-------------log4")
 	//getSignAlgorithm := getSignAlgorithm("rsa","2048")
 	log.Println("---------------------signALG---------")
