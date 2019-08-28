@@ -36,23 +36,7 @@ type DownloadResponseType struct {
 	Desc string   `json:"description"`
 }
 
-// To get the SSLID from Enroll Cert Response Status
-
 var oidemail_address = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 1}
-
-// var (
-// 	host       = flag.String("host", "trianzcloud.com", "Comma-separated hostnames and IPs to generate a certificate for")
-// 	validFrom  = flag.String("start-date", "", "Creation date formatted as Jan 1 15:04:05 2011")
-// 	validFor   = flag.Duration("duration", 365*24*time.Hour, "Duration that certificate is valid for")
-// 	isCA       = flag.Bool("ca", false, "whether this cert should be its own Certificate Authority")
-// 	rsaBits    = flag.Int("rsa-bits", 2048, "Size of RSA key to generate. Ignored if --ecdsa-curve is set")
-// 	ecdsaCurve = flag.String("ecdsa-curve", "P256", "ECDSA curve to use to generate a key. Valid values are P224, P256 (recommended), P384, P521")
-// )
-
-// var signAlgType = "ecdsa-curve"
-// var rsaBits = 2048
-// var curvelength = "P256"
-
 
 // PEM Block for Key Generation
 func pemBlockForKey(priv interface{}) *pem.Block {
@@ -88,29 +72,24 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	log.Println("signAlgType: "+signAlgType)
 
 	if signAlgType == "RSA" {
-		fmt.Println("log1")
 		priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
 	} else if signAlgType == "ECDSA" {
 		if curvelength == "P224" {
-			fmt.Println("log2")
 			priv, err = ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
 		} else if curvelength == "P256" {
-			fmt.Println("log3")
 			priv, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		} else if curvelength == "P384" {
-			fmt.Println("log4")
 			priv, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 		} else if curvelength == "P521" {
-			fmt.Println("log5")
 			priv, err = ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
 		} else {
-			fmt.Println("log6")
 			fmt.Fprintf(os.Stderr, "Unrecognized elliptic curve: %q", signAlgType)
 			os.Exit(1)
 		}
 	}
 	if err != nil {
 		log.Fatalf("failed to generate private key: %s", err)
+		WriteLogs(d,"failed to generate private key: %s"+err.Error())
 	}
 
 	// Write key to file
@@ -128,7 +107,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 		os.Exit(1)
 	}
 	if err := keyOut.Close(); err != nil {
-		log.Fatalf("error closing key.pem: %s", err)
+		log.Fatalf("Error closing key.pem: %s", err)
 		WriteLogs(d,"Error closing key.pem: "+err.Error())
 		CleanUp(d)
 		os.Exit(1)
@@ -151,6 +130,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	return nil, nil, ""
 }
 
+// Get SignAlgorithm to generate CSR
 func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.SignatureAlgorithm {
 	if signAlgType == "RSA" {
 		if rsaBits == 4096 {
@@ -164,16 +144,12 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 		} 
 	} else if signAlgType == "ECDSA" {
 		if curvelength == "P521" {
-			log.Println("-------------x509.ECDSAWithSHA512")
 			return x509.ECDSAWithSHA512
 		} else if curvelength == "P384" {
-			log.Println("-------------x509.ECDSAWithSHA384")
 			return x509.ECDSAWithSHA384
 		} else if curvelength == "P256" {
-			log.Println("-------------x509.ECDSAWithSHA256")
 			return x509.ECDSAWithSHA256
 		} else {
-			log.Println("-------------x509.ECDSAWithSHA1")
 			return x509.ECDSAWithSHA1
 		}
 	}
@@ -181,7 +157,7 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 }
 	
 // Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) ([]byte, string) {
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) (string) {
 
 	var signAlgType = d.Get("sign_algorithm_type").(string)
 	var rsaBits = d.Get("rsa_bits").(int)
@@ -193,7 +169,6 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	log.Println("Generating CSR forr "+domain)
 	WriteLogs(d,"Generating CSR forr "+domain)
 
-	//var getSignAlgorithm = x509.UnknownSignatureAlgorithm
 	getSignAlgorithm := getSignAlgorithm(signAlgType, rsaBits, curvelength)
 
 	log.Println("---------------------signALG---------")
@@ -272,8 +247,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
         os.Exit(1)
     }
 	var csrString = strings.Replace(string(csrVal),"\n","",-1)
-
-	return csrVal, csrString
+	return csrString
 }
 
 // Enroll Cert
@@ -284,8 +258,6 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 	url := d.Get("sectigo_ca_base_url").(string)+"enroll"
 	var jsonStr = []byte("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")	
 
-	log.Println("{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")	
-	WriteLogs(d,"{\"orgId\":"+strconv.Itoa(d.Get("sectigo_cm_orgid").(int))+",\"csr\":\""+csrVal+"\",\"certType\":"+strconv.Itoa(d.Get("cert_type").(int))+",\"numberServers\":"+strconv.Itoa(d.Get("cert_num_servers").(int))+",\"serverType\":"+strconv.Itoa(d.Get("server_type").(int))+",\"term\":"+strconv.Itoa(d.Get("cert_validity").(int))+",\"comments\":\""+d.Get("cert_comments").(string)+"\",\"externalRequester\":\""+d.Get("cert_ext_requester").(string)+"\",\"subjAltNames\":\""+d.Get("subject_alt_names").(string)+"\"}")
 	log.Println("Enrolling CERT for "+domain)
 	WriteLogs(d,"Enrolling CERT for "+domain)
 
@@ -304,7 +276,6 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
-		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
 		CleanUp(d)
@@ -358,12 +329,11 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 // DOWNLOAD CERT 
 func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int) string {
 	max_timeout := d.Get("max_timeout").(int)
-	//max_timeout, err := strconv.Atoi(max_timeout1)
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 	url := d.Get("sectigo_ca_base_url").(string)+"collect/"+strconv.Itoa(sslId)+"/x509CO"
 
-	log.Println("---------DOWNLOAD CERT for "+domain+"---------")
+	log.Println("\n---------DOWNLOAD CERT for "+domain+"---------")
 	log.Println(url)
 	WriteLogs(d,"---------DOWNLOAD CERT for "+domain+"---------")
 	WriteLogs(d,url)
@@ -377,7 +347,6 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
-		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
 		CleanUp(d)
@@ -429,11 +398,6 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			CleanUp(d)
 			os.Exit(1)
 		}
-
-		//Write CERT and SSLID to statefile
-		//d.Set("sectigo_crt",string(downloadResponse))
-		//d.Set("sectigo_ssl_id",strconv.Itoa(sslId))
-
 		return string(downloadResponse)
 	} else {
 		timer = timer + d.Get("loop_period").(int)
@@ -481,7 +445,6 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
     client := &http.Client{}
     resp, err := client.Do(req)
     if err != nil {
-		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
 		CleanUp(d)
@@ -491,7 +454,6 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 
 	revokeResponse, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
 		CleanUp(d)
@@ -524,8 +486,6 @@ func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string) s
 		CleanUp(d)
 		os.Exit(1)
 	} 
-	// log.Println(val)
-	// WriteLogs(d,val)
 	val = strings.Replace(string(val),"\r","",-1)
 	return string(val)
 }
@@ -545,8 +505,6 @@ func GetParamValue(d *schema.ResourceData,param string, envParam string) string 
 			val1 = val2
 		}		
 	} 
-	//log.Println(val1)
-	//WriteLogs(d,val1)
 	val := strings.Replace(string(val1),"\r","",-1)
 	return val
 }
