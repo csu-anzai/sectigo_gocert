@@ -366,8 +366,6 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	json.Unmarshal(downloadResponseJson, &dl)
 	var dlCode = dl.DlCode
 	if(dlCode != 1) && (dlCode != -1400) {
-		log.Println("Error Code <"+strconv.Itoa(dlCode)+": "+dl.Desc+">. The certificate may not be valid. Please contact Sectigo or try after sometime or use \"1) terraform destroy 2) terraform apply to regenerate cert\" ")
-		WriteLogs(d,"Error Code <"+strconv.Itoa(dlCode)+": "+dl.Desc+">. The certificate may not be valid. Please contact Sectigo or try after sometime or use \"1) terraform destroy 2) terraform apply to regenerate cert\"")
 		return "ErrorCode"
 	}	
 	
