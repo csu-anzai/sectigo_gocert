@@ -377,7 +377,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	var dl DownloadResponseType
 	json.Unmarshal(downloadResponseJson, &dl)
 	var dlCode = dl.DlCode
-	if(dlCode != 1) && (dlCode != -1400) {
+	if(dlCode != 0) && (dlCode != -1400) {
 		return "ErrorCode"
 	} else {
 		var downloadStatus = strings.Contains(resp.Status, "200")
@@ -425,7 +425,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 				WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 				WriteLogs(d,"Download Response:"+string(downloadResponse))
 	
-				if(dlCode == -1) || (dlCode == -1400) {
+				if(dlCode == 0) || (dlCode == -1400) {
 					return "TimedOutStateSaved"				
 				} else {
 					return "ErrorCode"				
