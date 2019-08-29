@@ -367,56 +367,57 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	var dlCode = dl.DlCode
 	if(dlCode != 1) && (dlCode != -1400) {
 		return "ErrorCode"
-	}	
-	
-	var downloadStatus = strings.Contains(resp.Status, "200")
-	if downloadStatus {
-		// Write crt to file		
-		f, err := os.Create(cert_file_path+domain+".crt")
-		if err != nil {
-			log.Println(err)
-			WriteLogs(d,err.Error())
-			CleanUp(d)
-			os.Exit(1)
-		}
-		l, err := f.WriteString(string(downloadResponse))
-		if err != nil {
-			log.Println(err)
-			WriteLogs(d,err.Error())
-			f.Close()
-			CleanUp(d)
-			os.Exit(1)
-		}
-		log.Println(l, "bytes written successfully")
-		err = f.Close()
-		if err != nil {
-			log.Println(err)
-			WriteLogs(d,err.Error())
-			CleanUp(d)
-			os.Exit(1)
-		}
-		return string(downloadResponse)
 	} else {
-		timer = timer + d.Get("loop_period").(int)
-		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
-		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
-		time.Sleep(time.Duration(d.Get("loop_period").(int)) * time.Second)
-		
-		if(timer >= max_timeout){	// if Wait time crosses Timeout... save and exit	
-			log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
-			log.Println("Download Response:", string(downloadResponse))
-			WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
-			WriteLogs(d,"Download Response:"+string(downloadResponse))
-
-			if(dlCode == -1) || (dlCode == -1400) {
-				return "TimedOutStateSaved"				
-			} else {
-				return "ErrorCode"				
+		var downloadStatus = strings.Contains(resp.Status, "200")
+		if downloadStatus {				// if 200 found in code... cert available for download
+			// Write crt to file		
+			f, err := os.Create(cert_file_path+domain+".crt")
+			if err != nil {
+				log.Println(err)
+				WriteLogs(d,err.Error())
+				CleanUp(d)
+				os.Exit(1)
 			}
-		} else {
-			return DownloadCert(sslId,d,customerArr,timer)
-		}
+			l, err := f.WriteString(string(downloadResponse))
+			if err != nil {
+				log.Println(err)
+				WriteLogs(d,err.Error())
+				f.Close()
+				CleanUp(d)
+				os.Exit(1)
+			}
+			log.Println(l, "bytes written successfully")
+			err = f.Close()
+			if err != nil {
+				log.Println(err)
+				WriteLogs(d,err.Error())
+				CleanUp(d)
+				os.Exit(1)
+			}
+			return string(downloadResponse)
+		} else {						// code does not have 200.. not 
+			timer = timer + d.Get("loop_period").(int)
+			log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
+			WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
+			time.Sleep(time.Duration(d.Get("loop_period").(int)) * time.Second)
+			
+			if(timer >= max_timeout){	// if Wait time crosses Timeout... save and exit	
+				log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
+				log.Println("Download Response:", string(downloadResponse))
+				WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
+				WriteLogs(d,"Download Response:"+string(downloadResponse))
+	
+				if(dlCode == -1) || (dlCode == -1400) {
+					return "TimedOutStateSaved"				
+				} else {
+					return "ErrorCode"				
+				}
+			} else {
+				return DownloadCert(sslId,d,customerArr,timer)
+			}
+		}	
 	}
+	
 	return string(downloadResponse)
 }
 
