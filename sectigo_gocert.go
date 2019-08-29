@@ -59,6 +59,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa.PrivateKey, string) {
 
 	domain := d.Get("domain").(string)
+	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 	var priv interface{}
 	var err error
@@ -93,7 +94,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	}
 
 	// Write key to file
-	keyOut, err := os.OpenFile(cert_file_path+domain+".key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(cert_file_path+cert_file_name+".key", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		log.Print("Failed to open key.pem for writing:", err)
 		WriteLogs(d,"Failed to open key.pem for writing: "+err.Error())
@@ -114,7 +115,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	}
 
 	//Read Key from file and put it in the tfstate
-	keyVal, err := ioutil.ReadFile(cert_file_path+domain+".key")
+	keyVal, err := ioutil.ReadFile(cert_file_path+cert_file_name+".key")
 	if err != nil {
 		log.Println("Failed to read the key from file:", err)
 		WriteLogs(d,"Failed to read the key from file:"+ err.Error())
@@ -164,6 +165,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	var curvelength = d.Get("curve_length").(string)
 
 	domain := d.Get("domain").(string)
+	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 
 	log.Println("Generating CSR forr "+domain)
@@ -204,7 +206,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
     }
 
 	// Put CSR in a file 
-    csrOut, err := os.Create(cert_file_path+domain+".csr")
+    csrOut, err := os.Create(cert_file_path+cert_file_name+".csr")
     if err != nil {
 		log.Println("Failed to open CSR for writing:", err)
 		WriteLogs(d,"Failed to open CSR for writing:"+err.Error())
@@ -240,7 +242,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	csrOut.Close()
 
 	//Read CSR from file and put it in the tfstate
-	csrVal, err := ioutil.ReadFile(cert_file_path+domain+".csr")
+	csrVal, err := ioutil.ReadFile(cert_file_path+cert_file_name+".csr")
 	if err != nil {
 		log.Println("Failed to write CSR to a file:", err)
 		WriteLogs(d,"Failed to write CSR to a file:"+err.Error())
@@ -340,6 +342,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int, fileSupplied bool) string {
 	max_timeout := d.Get("max_timeout").(int)
 	domain := d.Get("domain").(string)
+	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 	url := d.Get("sectigo_ca_base_url").(string)+"collect/"+strconv.Itoa(sslId)+"/x509CO"
 
@@ -383,7 +386,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 		var downloadStatus = strings.Contains(resp.Status, "200")
 		if downloadStatus {				// if 200 found in code... cert available for download
 			// Write crt to file		
-			f, err := os.Create(cert_file_path+domain+".crt")
+			f, err := os.Create(cert_file_path+cert_file_name+".crt")
 			if err != nil {
 				log.Println(err)
 				WriteLogs(d,err.Error())
@@ -528,11 +531,11 @@ func GetParamValue(d *schema.ResourceData,param string, envParam string) string 
 // Write Logs to a file
 func WriteLogs(d *schema.ResourceData,log string){
 	current := time.Now()
-	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
+	cert_file_name := d.Get("cert_file_name").(string)
 		
 	// If the file doesn't exist, create it, or append to the file
-	file, err := os.OpenFile(cert_file_path+domain+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(cert_file_path+cert_file_name+".log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -546,20 +549,20 @@ func WriteLogs(d *schema.ResourceData,log string){
 
 // Clean up the previous files
 func CleanUp(d *schema.ResourceData,params ...string){
-	domain := d.Get("domain").(string)
+	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 
 	if len(params) > 0 {
-		var oldDomain = params[0]
-		os.Remove(cert_file_path+oldDomain+".csr")
-		os.Remove(cert_file_path+oldDomain+".crt")
-		os.Remove(cert_file_path+oldDomain+".key")
+		var old_cert_file_name = params[0]
+		os.Remove(cert_file_path+old_cert_file_name+".csr")
+		os.Remove(cert_file_path+old_cert_file_name+".crt")
+		os.Remove(cert_file_path+old_cert_file_name+".key")
 		log.Println("Deleting any previous CSR/KEY/CERT that was generated")
 		WriteLogs(d,"Deleting any previous CSR/KEY/CERT that was generated")
 	} else{
-		os.Remove(cert_file_path+domain+".csr")
-		os.Remove(cert_file_path+domain+".crt")
-		os.Remove(cert_file_path+domain+".key")	
+		os.Remove(cert_file_path+cert_file_name+".csr")
+		os.Remove(cert_file_path+cert_file_name+".crt")
+		os.Remove(cert_file_path+cert_file_name+".key")	
 		log.Println("Could not complete the process. Deleting any CSR/KEY/CERT that was generated")
 		WriteLogs(d,"Could not complete the process. Deleting any CSR/KEY/CERT that was generated")
 	}
