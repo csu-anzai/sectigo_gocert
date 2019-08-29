@@ -116,8 +116,8 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	//Read Key from file and put it in the tfstate
 	keyVal, err := ioutil.ReadFile(cert_file_path+domain+".key")
 	if err != nil {
-		log.Println("Failed to read the ca.key from file:", err)
-		WriteLogs(d,"Failed to read the ca.key from file:"+ err.Error())
+		log.Println("Failed to read the key from file:", err)
+		WriteLogs(d,"Failed to read the key from file:"+ err.Error())
 		CleanUp(d)
 		os.Exit(1)
 	}
