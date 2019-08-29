@@ -365,12 +365,11 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	var dl DownloadResponseType
 	json.Unmarshal(downloadResponseJson, &dl)
 	var dlCode = dl.DlCode
-	if(dlCode != 0) && (dlCode != -1400) {
-		log.Println("Cert code <"+strconv.Itoa(dlCode)+": "+dl.Desc+"> not valid. Process not complete. Exiting.")
-		WriteLogs(d,"Cert code <"+strconv.Itoa(dlCode)+": "+dl.Desc+"> not valid. Process not complete. Exiting.")
-		CleanUp(d)
-		os.Exit(1)	
-	}
+	if(dlCode != 1) && (dlCode != -1400) {
+		log.Println("Error Code <"+strconv.Itoa(dlCode)+": "+dl.Desc+">. The certificate may not be valid. Please contact Sectigo or use 1) terraform destroy 2) terraform apply to regenerate cert")
+		WriteLogs(d,"Error Code <"+strconv.Itoa(dlCode)+": "+dl.Desc+">. The certificate may not be valid. Please contact Sectigo or use 1) terraform destroy 2) terraform apply to regenerate cert")
+		return "ErrorCode"
+	}	
 	
 	var downloadStatus = strings.Contains(resp.Status, "200")
 	if downloadStatus {
@@ -404,17 +403,17 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 		log.Println("Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		WriteLogs(d,"Waiting for "+strconv.Itoa(timer)+" / "+strconv.Itoa(max_timeout)+" seconds before the next download attempt...")
 		time.Sleep(time.Duration(d.Get("loop_period").(int)) * time.Second)
-		if(timer >= max_timeout){
+		
+		if(timer >= max_timeout){	// if Wait time crosses Timeout... save and exit	
 			log.Println("Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			log.Println("Download Response:", string(downloadResponse))
 			WriteLogs(d,"Timed out!! Waited for "+strconv.Itoa(timer)+"/"+strconv.Itoa(max_timeout)+" seconds. You can increase/decrease the timeout period (in seconds) in the tfvars file")
 			WriteLogs(d,"Download Response:"+string(downloadResponse))
 
-			if(dlCode == 0) || (dlCode == -1400) {
+			if(dlCode == -1) || (dlCode == -1400) {
 				return "TimedOutStateSaved"				
 			} else {
-				CleanUp(d)
-				os.Exit(1)	
+				return "ErrorCode"				
 			}
 		} else {
 			return DownloadCert(sslId,d,customerArr,timer)
