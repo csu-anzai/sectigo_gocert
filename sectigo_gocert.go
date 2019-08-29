@@ -251,7 +251,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 }
 
 // Enroll Cert
-func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]string) (int,string) {
+func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]string, fileSupplied bool) (int,string) {
 	domain := d.Get("domain").(string)
 	var sslId = 0
 	var renewId = ""
@@ -269,7 +269,9 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		if !fileSupplied {
+			CleanUp(d)
+		}
 		os.Exit(1)
     }
 
@@ -278,7 +280,9 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		if !fileSupplied {
+			CleanUp(d)
+		}
 		os.Exit(1)
     }
     defer resp.Body.Close()
@@ -288,7 +292,9 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		if !fileSupplied {
+			CleanUp(d)
+		}
 		os.Exit(1)
     }
 	log.Println("Response Status:", resp.Status)
@@ -314,20 +320,24 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 		} else {
 			log.Println("SSLID Generation Failed... Exiting..."+string(enrollResponse))
 			WriteLogs(d,"SSLID Generation Failed... Exiting..."+string(enrollResponse))
-			CleanUp(d)
+			if !fileSupplied {
+				CleanUp(d)
+			}
 			os.Exit(1)
 		}
 	} else {
 		log.Println("Certificate Enrollment Failed... Exiting..."+string(enrollResponse))
 		WriteLogs(d,"Certificate Enrollment Failed... Exiting..."+string(enrollResponse))
-		CleanUp(d)
+		if !fileSupplied {
+			CleanUp(d)
+		}
 		os.Exit(1)
 	}
 	return sslId,renewId
 }
 
 // DOWNLOAD CERT 
-func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int) string {
+func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]string, timer int, fileSupplied bool) string {
 	max_timeout := d.Get("max_timeout").(int)
 	domain := d.Get("domain").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
@@ -349,7 +359,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		if !fileSupplied {
+			CleanUp(d)
+		}
 		os.Exit(1)
     }
     defer resp.Body.Close()
@@ -375,7 +387,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			if err != nil {
 				log.Println(err)
 				WriteLogs(d,err.Error())
-				CleanUp(d)
+				if !fileSupplied {
+					CleanUp(d)
+				}
 				os.Exit(1)
 			}
 			l, err := f.WriteString(string(downloadResponse))
@@ -383,7 +397,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 				log.Println(err)
 				WriteLogs(d,err.Error())
 				f.Close()
-				CleanUp(d)
+				if !fileSupplied {
+					CleanUp(d)
+				}
 				os.Exit(1)
 			}
 			log.Println(l, "bytes written successfully")
@@ -391,7 +407,9 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			if err != nil {
 				log.Println(err)
 				WriteLogs(d,err.Error())
-				CleanUp(d)
+				if !fileSupplied {
+					CleanUp(d)
+				}
 				os.Exit(1)
 			}
 			return string(downloadResponse)
@@ -413,7 +431,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 					return "ErrorCode"				
 				}
 			} else {
-				return DownloadCert(sslId,d,customerArr,timer)
+				return DownloadCert(sslId,d,customerArr,timer,fileSupplied)
 			}
 		}	
 	}
