@@ -253,6 +253,42 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 }
 
 func CheckCertValidity(d *schema.ResourceData) bool {
+	cert_file_name := d.Get("cert_file_name").(string)
+	cert_file_path := d.Get("cert_file_path").(string)
+	certPEM, err := ioutil.ReadFile(cert_file_path+cert_file_name+".csr")
+	if err != nil {
+		log.Println("Failed to write CSR to a file:", err)
+		WriteLogs(d,"Failed to write CSR to a file:"+err.Error())
+        os.Exit(1)
+	}
+
+	block, _ := pem.Decode([]byte(certPEM))
+	if block == nil {
+		panic("Failed to parse certificate PEM")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		panic("failed to parse certificate: " + err.Error())
+	}
+
+	now := time.Now()	
+	warningDays := d.Get("cert_warning_days").(int)
+	expiryDate := cert.NotAfter
+	warningDate := expiryDate.AddDate(0, 0,(warningDays*-1))
+
+	log.Println("==================")
+	log.Println("Current Date: ", now)
+	log.Println("Warning Date: ", warningDate)
+	log.Println("Expiry Date:  ", expiryDate)
+	WriteLogs(d,"Current Date: "+ now.Format("2006-01-02 15:04:05"))
+	WriteLogs(d,"Warning Date: "+ warningDate.Format("2006-01-02 15:04:05"))
+	WriteLogs(d,"Expiry Date:  "+ expiryDate.Format("2006-01-02 15:04:05"))
+
+	if now.Before(expiryDate) && now.After(warningDate) {
+		return true
+	} else {
+		return false
+	}
 	return false
 }
 
