@@ -253,7 +253,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 }
 
 func CheckCertValidity(d *schema.ResourceData) bool {
-	return false
+	return true
 }
 
 // Enroll Cert
