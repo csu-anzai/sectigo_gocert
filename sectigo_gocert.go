@@ -252,6 +252,9 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	return csrString
 }
 
+func checkCertValidity(d *schema.ResourceData) bool {
+	return false
+}
 // Enroll Cert
 func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]string, fileSupplied bool) (int,string) {
 	domain := d.Get("domain").(string)
