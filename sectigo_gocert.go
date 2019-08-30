@@ -253,7 +253,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 }
 
 func CheckCertValidity(d *schema.ResourceData) bool {
-	return true
+	return false
 }
 
 // Enroll Cert
@@ -444,6 +444,65 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 	}
 	
 	return string(downloadResponse)
+}
+
+// Renew Certificate
+func RenewCertificate(d *schema.ResourceData,customerArr map[string]string) (string,int) {
+	renewId := d.Get("sectigo_renew_id").(string)
+	url := d.Get("sectigo_ca_base_url").(string)+"renew/"+renewId
+	log.Println(url)
+	WriteLogs(d,url)
+	var jsonStr = []byte("{\"reason\":\"Terraform Certificate Renew. Current Renew ID: "+renewId+"\"}")
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+    if err != nil {
+		log.Println(err)
+		WriteLogs(d,err.Error())
+		os.Exit(1)
+    }
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Login", customerArr["username"])
+	req.Header.Set("Password", customerArr["password"])
+	req.Header.Set("Customeruri", customerArr["customer_uri"])
+
+    client := &http.Client{}
+    resp, err := client.Do(req)
+    if err != nil {
+		log.Println(err)
+		WriteLogs(d,err.Error())
+		CleanUp(d)
+		os.Exit(1)
+    }
+    defer resp.Body.Close()
+
+	renewResponse, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Println(err)
+		WriteLogs(d,err.Error())
+		CleanUp(d)
+		os.Exit(1)
+    }
+	log.Println("Renew Response Status:", resp.Status)
+    log.Println("Renew Response:", string(renewResponse))
+	WriteLogs(d,"Renew Response Status:"+ resp.Status)
+    WriteLogs(d,"Renew Response:"+string(renewResponse))
+
+	var newRenewId = ""
+	var newSslId = 0
+	var renewStatus = strings.Contains(resp.Status, "204")
+	if renewStatus  {
+		// Fetch ssl id from response json
+		var renewResponseJson = []byte(string(renewResponse))
+		var enr EnrollResponseType
+		json.Unmarshal(renewResponseJson, &enr)
+		newSslId = enr.SslIdVal
+		newRenewId = enr.RenewId
+		log.Println("Certificate successfully Renewed...")
+		WriteLogs(d,"Certificate successfully Renewed...")
+	} else {
+		os.Exit(1)
+	}
+	return newRenewId, newSslId
 }
 
 // Revoke Certificate 
