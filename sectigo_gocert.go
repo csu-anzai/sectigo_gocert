@@ -56,7 +56,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 }
 
 // Generate Key
-func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa.PrivateKey, string) {
+func GenerateKey(d *schema.ResourceData, m interface{}, FilesArr map[string]bool) (*rsa.PrivateKey, *ecdsa.PrivateKey, string) {
 
 	domain := d.Get("domain").(string)
 	cert_file_name := d.Get("cert_file_name").(string)
@@ -98,19 +98,19 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	if err != nil {
 		log.Print("Failed to open key.pem for writing:", err)
 		WriteLogs(d,"Failed to open key.pem for writing: "+err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	}
 	if err := pem.Encode(keyOut, pemBlockForKey(priv)); err != nil {
 		log.Fatalf("Failed to write data to key.pem: %s", err)
 		WriteLogs(d,"Failed to write data to key.pem: "+err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	}
 	if err := keyOut.Close(); err != nil {
 		log.Fatalf("Error closing key.pem: %s", err)
 		WriteLogs(d,"Error closing key.pem: "+err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	}
 
@@ -119,7 +119,7 @@ func GenerateKey(d *schema.ResourceData, m interface{}) (*rsa.PrivateKey, *ecdsa
 	if err != nil {
 		log.Println("Failed to read the key from file:", err)
 		WriteLogs(d,"Failed to read the key from file:"+ err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	}
 	
@@ -158,7 +158,7 @@ func getSignAlgorithm(signAlgType string, rsaBits int, curvelength string) x509.
 }
 	
 // Generate CSR
-func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey) (string) {
+func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.PrivateKey, keyBytesECDSA *ecdsa.PrivateKey, FilesArr map[string]bool) (string) {
 
 	var signAlgType = d.Get("sign_algorithm_type").(string)
 	var rsaBits = d.Get("rsa_bits").(int)
@@ -202,7 +202,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
     if err != nil {
 		log.Println("Failed to open CSR for writing:", err)
 		WriteLogs(d,"Failed to open CSR for writing:"+err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
         os.Exit(1)
     }
 
@@ -211,7 +211,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 		if err != nil {
 			log.Println("Failed to Generate CSR for ECDSA:", err)
 			WriteLogs(d,"Failed to Generate CSR for ECDSA :"+err.Error())
-			CleanUp(d)
+			CleanUp(d,FilesArr)
 			os.Exit(1)
 		}
 		pem.Encode(csrOut, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrBytes})
@@ -237,7 +237,7 @@ func GenerateCSR(d *schema.ResourceData, m interface{}, keyBytesRSA *rsa.Private
 	return csrString
 }
 
-func CheckCertValidity(d *schema.ResourceData) bool {
+func CheckCertValidity(d *schema.ResourceData, FilesArr map[string]bool) bool {
 	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 	certPEM, err := ioutil.ReadFile(cert_file_path+cert_file_name+".crt")
@@ -297,7 +297,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
 
@@ -306,7 +306,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
     defer resp.Body.Close()
@@ -316,7 +316,7 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 		//panic(err)
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
 	log.Println("Response Status:", resp.Status)
@@ -342,13 +342,13 @@ func EnrollCert(d *schema.ResourceData,csrVal string, customerArr map[string]str
 		} else {
 			log.Println("SSLID Generation Failed... Exiting..."+string(enrollResponse))
 			WriteLogs(d,"SSLID Generation Failed... Exiting..."+string(enrollResponse))
-			CleanUp(d)
+			CleanUp(d,FilesArr)
 			os.Exit(1)
 		}
 	} else {
 		log.Println("Certificate Enrollment Failed... Exiting..."+string(enrollResponse))
 		WriteLogs(d,"Certificate Enrollment Failed... Exiting..."+string(enrollResponse))
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	}
 	return sslId,renewId
@@ -378,7 +378,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
     defer resp.Body.Close()
@@ -404,7 +404,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			if err != nil {
 				log.Println(err)
 				WriteLogs(d,err.Error())
-				CleanUp(d)
+				CleanUp(d,FilesArr)
 				os.Exit(1)
 			}
 			l, err := f.WriteString(string(downloadResponse))
@@ -412,7 +412,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 				log.Println(err)
 				WriteLogs(d,err.Error())
 				f.Close()
-				CleanUp(d)
+				CleanUp(d,FilesArr)
 				os.Exit(1)
 			}
 			log.Println(l, "bytes written successfully")
@@ -420,7 +420,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 			if err != nil {
 				log.Println(err)
 				WriteLogs(d,err.Error())
-				CleanUp(d)
+				CleanUp(d,FilesArr)
 				os.Exit(1)
 			}
 			return string(downloadResponse)
@@ -474,7 +474,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 //     if err != nil {
 // 		log.Println(err)
 // 		WriteLogs(d,err.Error())
-// 		CleanUp(d)
+// 		CleanUp(d,FilesArr)
 // 		os.Exit(1)
 //     }
 //     defer resp.Body.Close()
@@ -483,7 +483,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 // 	if err != nil {
 // 		log.Println(err)
 // 		WriteLogs(d,err.Error())
-// 		CleanUp(d)
+// 		CleanUp(d,FilesArr)
 // 		os.Exit(1)
 //     }
 // 	log.Println("Renew Response Status:", resp.Status)
@@ -510,7 +510,7 @@ func DownloadCert(sslId int, d *schema.ResourceData, customerArr map[string]stri
 // }
 
 // Revoke Certificate 
-func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string]string) (bool, error) {
+func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string]string, FilesArr map[string]bool) (bool, error) {
 	var flg = false 
 	url := d.Get("sectigo_ca_base_url").(string)+"revoke/"+strconv.Itoa(sslId)
 	log.Println(url)
@@ -533,7 +533,7 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
     if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
     defer resp.Body.Close()
@@ -542,7 +542,7 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 	if err != nil {
 		log.Println(err)
 		WriteLogs(d,err.Error())
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
     }
 	log.Println("Revoke Response Status:", resp.Status)
@@ -554,7 +554,7 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 	if revokeStatus  {
 		log.Println("Certificate successfully Revoked...")
 		WriteLogs(d,"Certificate successfully Revoked...")
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		flg = true
 	} else {
 		os.Exit(1)
@@ -563,13 +563,13 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 }
 
 // Get Env value
-func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string) string {
+func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string, FilesArr map[string]bool) string {
 
 	val := os.Getenv(envParam)
 	if val == ""  {
 		log.Println(param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
 		WriteLogs(d,param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
-		CleanUp(d)
+		CleanUp(d,FilesArr)
 		os.Exit(1)
 	} 
 	val = strings.Replace(string(val),"\r","",-1)
@@ -577,7 +577,7 @@ func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string) s
 }
 
 // Get Param value
-func GetParamValue(d *schema.ResourceData,param string, envParam string) string {
+func GetParamValue(d *schema.ResourceData,param string, envParam string, FilesArr map[string]bool) string {
 
 	val1 := d.Get(param).(string)
 	if (val1 == "") {
@@ -585,7 +585,7 @@ func GetParamValue(d *schema.ResourceData,param string, envParam string) string 
 		if val2 == "" || !exists {
 			log.Println(param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
 			WriteLogs(d,param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
-			CleanUp(d)
+			CleanUp(d,FilesArr)
 			os.Exit(1)
 		} else{
 			val1 = val2
@@ -615,7 +615,7 @@ func WriteLogs(d *schema.ResourceData,log string){
 }
 
 // Clean up the previous files
-func CleanUp(d *schema.ResourceData,params ...string){
+func CleanUp(d *schema.ResourceData, FilesArr map[string]bool, params ...string){
 	cert_file_name := d.Get("cert_file_name").(string)
 	cert_file_path := d.Get("cert_file_path").(string)
 
