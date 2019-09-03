@@ -563,13 +563,12 @@ func RevokeCertificate(sslId int, d *schema.ResourceData, customerArr map[string
 }
 
 // Get Env value
-func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string, FilesArr map[string]bool) string {
+func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string) string {
 
 	val := os.Getenv(envParam)
 	if val == ""  {
 		log.Println(param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
 		WriteLogs(d,param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
-		CleanUp(d,FilesArr)
 		os.Exit(1)
 	} 
 	val = strings.Replace(string(val),"\r","",-1)
@@ -577,7 +576,7 @@ func GetProviderEnvValue(d *schema.ResourceData,param string, envParam string, F
 }
 
 // Get Param value
-func GetParamValue(d *schema.ResourceData,param string, envParam string, FilesArr map[string]bool) string {
+func GetParamValue(d *schema.ResourceData,param string, envParam string) string {
 
 	val1 := d.Get(param).(string)
 	if (val1 == "") {
@@ -585,7 +584,6 @@ func GetParamValue(d *schema.ResourceData,param string, envParam string, FilesAr
 		if val2 == "" || !exists {
 			log.Println(param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
 			WriteLogs(d,param+" Variable \""+envParam+"\" not set or empty. Please set the password in TFVARS file or as Environment Variable and try again.")
-			CleanUp(d,FilesArr)
 			os.Exit(1)
 		} else{
 			val1 = val2
