@@ -619,6 +619,8 @@ func CleanUp(d *schema.ResourceData, FilesArr map[string]bool, params ...string)
 
 	if len(params) > 0 {
 		var old_cert_file_name = params[0]
+		log.Println("################# log 3")
+		log.Println(old_cert_file_name)
 		
 		if !FilesArr["CrtProvided"] {
 			os.Remove(cert_file_path+old_cert_file_name+".crt")
@@ -638,6 +640,8 @@ func CleanUp(d *schema.ResourceData, FilesArr map[string]bool, params ...string)
 		// log.Println("Deleting any previous CSR/KEY/CERT that was generated")
 		// WriteLogs(d,"Deleting any previous CSR/KEY/CERT that was generated")
 	} else{
+		log.Println("################# log 4")
+		log.Println(cert_file_name)
 		if !FilesArr["CrtProvided"] {
 			os.Remove(cert_file_path+cert_file_name+".crt")
 			log.Println("Deleting CERT that was generated")
