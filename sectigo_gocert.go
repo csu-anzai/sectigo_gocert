@@ -284,13 +284,13 @@ func CheckCertValidity(d *schema.ResourceData) bool {
 	WriteLogs(d,"Warning Date: "+ warningDate.Format("2006-01-02 15:04:05"))
 	WriteLogs(d,"Expiry Date:  "+ expiryDate.Format("2006-01-02 15:04:05"))
 
-	// if now.Before(expiryDate) && now.After(warningDate) {
-	if now.After(warningDate) {
+	//if now.Before(expiryDate) && now.After(warningDate) {	
+	if now.After(warningDate) {		// if current date is after the warning date
 		log.Println("--------------------log 1")
-		return true
+		return false
 	} else {
 		log.Println("--------------------log 2")
-		return false
+		return true
 	}
 	log.Println("--------------------log 3")
 	return false
