@@ -619,15 +619,28 @@ func CleanUp(d *schema.ResourceData, FilesArr map[string]bool, params ...string)
 
 	if len(params) > 0 {
 		var old_cert_file_name = params[0]
-		os.Remove(cert_file_path+old_cert_file_name+".csr")
-		os.Remove(cert_file_path+old_cert_file_name+".crt")
-		os.Remove(cert_file_path+old_cert_file_name+".key")
+		
+		if !FilesArr["CrtProvided"] {
+			os.Remove(cert_file_path+old_cert_file_name+".crt")
+		}
+		if !FilesArr["KeyProvided"] {
+			os.Remove(cert_file_path+old_cert_file_name+".key")
+		}
+		if !FilesArr["CsrProvided"] {
+			os.Remove(cert_file_path+old_cert_file_name+".csr")
+		}		
 		log.Println("Deleting any previous CSR/KEY/CERT that was generated")
 		WriteLogs(d,"Deleting any previous CSR/KEY/CERT that was generated")
 	} else{
-		os.Remove(cert_file_path+cert_file_name+".csr")
-		os.Remove(cert_file_path+cert_file_name+".crt")
-		os.Remove(cert_file_path+cert_file_name+".key")	
+		if !FilesArr["CrtProvided"] {
+			os.Remove(cert_file_path+cert_file_name+".csr")
+		}
+		if !FilesArr["CsrProvided"] {
+			os.Remove(cert_file_path+cert_file_name+".crt")
+		}
+		if !FilesArr["KeyProvided"] {
+			os.Remove(cert_file_path+cert_file_name+".key")	
+		}
 		log.Println("Could not complete the process. Deleting any CSR/KEY/CERT that was generated")
 		WriteLogs(d,"Could not complete the process. Deleting any CSR/KEY/CERT that was generated")
 	}
